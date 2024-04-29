@@ -1,0 +1,18 @@
+[package]
+name = "esp-ota-nostd"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jonathan Brouwer <jonathantbrouwer@gmail.com>", "Anne Stijns <anstijns@gmail.com>"]
+license = "MIT"
+
+[dependencies]
+esp-hal = { version = "0.17.0", default-features = false }
+
+[features]
+esp32c2 = [ "esp-hal/esp32c2" ]
+esp32c3 = [ "esp-hal/esp32c3" ]
+esp32c6 = [ "esp-hal/esp32c6" ]
+esp32h2 = [ "esp-hal/esp32h2" ]
+esp32   = [ "esp-hal/esp32" ]
+esp32s2 = [ "esp-hal/esp32s2" ]
+esp32s3 = [ "esp-hal/esp32s3" ]
