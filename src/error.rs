@@ -1,5 +1,5 @@
 use embedded_storage::nor_flash::NorFlash;
-use esp_partition_table::{NorFlashOpError};
+use esp_partition_table::NorFlashOpError;
 
 /// Errors that may occur during an OTA update
 pub enum OtaUpdateError<S: NorFlash, R> {

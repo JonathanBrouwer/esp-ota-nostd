@@ -1,10 +1,10 @@
-use embedded_storage::nor_flash::NorFlash;
 use crate::error::OtaInternalError;
-use crate::error::OtaInternalError::{PartitionFoundTwice, PartitionNotFound, NorFlashOpError};
+use crate::error::OtaInternalError::{NorFlashOpError, PartitionFoundTwice, PartitionNotFound};
+use embedded_storage::nor_flash::NorFlash;
 use esp_partition_table::{PartitionEntry, PartitionTable, PartitionType};
 
 /// Find partition entry by type
-pub fn find_partition_type<S: NorFlash>(
+pub fn find_partition_by_type<S: NorFlash>(
     storage: &mut S,
     typ: PartitionType,
 ) -> Result<PartitionEntry, OtaInternalError<S>> {

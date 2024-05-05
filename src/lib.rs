@@ -8,13 +8,13 @@ mod partitions;
 
 use crate::error::{OtaInternalError, OtaUpdateError};
 use crate::ota_data::{read_ota_data, write_ota_data};
-use crate::partitions::find_partition_type;
+use crate::ota_data_structs::{EspOTAData, EspOTAState};
+pub use crate::partitions::find_partition_by_type;
 use core::sync::atomic::Ordering;
 use embedded_io_async::Read;
 use embedded_storage::nor_flash::NorFlash;
 use esp_partition_table::{AppPartitionType, NorFlashOpError, PartitionType};
 use portable_atomic::AtomicBool;
-use crate::ota_data_structs::EspOTAData;
 
 /// Size of a flash sector
 const SECTOR_SIZE: usize = 0x1000;
@@ -47,13 +47,13 @@ pub async fn ota_begin<S: NorFlash, R: Read>(
     let new_seq = ota_data.seq + 1;
     let new_part = ((new_seq - 1) % 2) as u8;
     log::info!("Starting OTA update. Current sequence is {booted_seq}, updating to sequence {new_seq} (partition {new_part}).");
-    let ota_app = find_partition_type(
-        storage,
-        PartitionType::App(AppPartitionType::Ota(new_part)),
-    )?;
-    
+    let ota_app =
+        find_partition_by_type(storage, PartitionType::App(AppPartitionType::Ota(new_part)))?;
+
     // Erase partition
-    storage.erase(ota_app.offset, ota_app.offset + ota_app.size as u32).map_err(|e| OtaInternalError::NorFlashOpError(NorFlashOpError::StorageError(e)))?;
+    storage
+        .erase(ota_app.offset, ota_app.offset + ota_app.size as u32)
+        .map_err(|e| OtaInternalError::NorFlashOpError(NorFlashOpError::StorageError(e)))?;
 
     // Write ota data to flash
     let mut data_written = 0;
@@ -66,9 +66,7 @@ pub async fn ota_begin<S: NorFlash, R: Read>(
             let read = binary
                 .read(&mut data_buffer[read_len..])
                 .await
-                .map_err(|e| {
-                    OtaUpdateError::ReadError(e)
-                })?;
+                .map_err(|e| OtaUpdateError::ReadError(e))?;
             if read == 0 {
                 is_done = true;
                 break;
@@ -80,10 +78,12 @@ pub async fn ota_begin<S: NorFlash, R: Read>(
             return Err(OtaUpdateError::OutOfSpace);
         }
 
-        storage.write(
-            ota_app.offset + data_written as u32,
-            &data_buffer[0..read_len],
-        ).map_err(|e| OtaInternalError::NorFlashOpError(NorFlashOpError::StorageError(e)))?;
+        storage
+            .write(
+                ota_app.offset + data_written as u32,
+                &data_buffer[0..read_len],
+            )
+            .map_err(|e| OtaInternalError::NorFlashOpError(NorFlashOpError::StorageError(e)))?;
 
         data_written += read_len;
         progress_fn(data_written);
@@ -98,4 +98,32 @@ pub async fn ota_begin<S: NorFlash, R: Read>(
     write_ota_data(storage, data)?;
 
     Ok(())
+}
+
+/// Mark OTA update as valid.
+/// Must be called after an OTA update and reboot to confirm the new firmware works.
+/// May also be called after a reboot without OTA update.
+/// If the system reboots before an OTA update is accepted
+/// the update will be marked as aborted and will not be booted again.
+pub fn ota_accept<S: NorFlash>(storage: &mut S) -> Result<(), OtaInternalError<S>> {
+    let mut ota_data = read_ota_data(storage)?;
+    ota_data.state = EspOTAState::Valid;
+    write_ota_data(storage, ota_data)?;
+    Ok(())
+}
+
+/// Explicitly mark an OTA update as invalid.
+/// May be called after an OTA update failed, but is not required.
+/// If the system reboots before an OTA update is confirmed as valid
+/// the update will be marked as aborted and will not be booted again.
+pub fn ota_reject<S: NorFlash>(storage: &mut S) -> Result<(), OtaInternalError<S>> {
+    let mut ota_data = read_ota_data(storage)?;
+    ota_data.state = EspOTAState::Invalid;
+    write_ota_data(storage, ota_data)?;
+    Ok(())
+}
+
+/// Returns true if this OTA update has been accepted, i.e. with `ota_accept`
+pub fn ota_is_valid<S: NorFlash>(storage: &mut S) -> Result<bool, OtaInternalError<S>> {
+    Ok(read_ota_data(storage)?.is_valid())
 }
