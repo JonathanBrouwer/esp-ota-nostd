@@ -11,8 +11,8 @@ use crate::ota_data::{read_ota_data, write_ota_data};
 use crate::partitions::find_partition_type;
 use core::sync::atomic::Ordering;
 use embedded_io_async::Read;
-use embedded_storage::Storage;
-use esp_partition_table::{AppPartitionType, PartitionType, StorageOpError};
+use embedded_storage::nor_flash::NorFlash;
+use esp_partition_table::{AppPartitionType, NorFlashOpError, PartitionType};
 use portable_atomic::AtomicBool;
 use crate::ota_data_structs::EspOTAData;
 
@@ -26,7 +26,7 @@ static IS_UPDATING: AtomicBool = AtomicBool::new(false);
 /// - This function returns an error if multiple ota updates are attempted concurrently.
 /// - If the update was successful, the caller should reboot to activate the new firmware.
 /// - The `progress_fn` is called periodically with the total amount of bytes written so far.
-pub async fn ota_begin<S: Storage, R: Read>(
+pub async fn ota_begin<S: NorFlash, R: Read>(
     storage: &mut S,
     mut binary: R,
     mut progress_fn: impl FnMut(usize),
@@ -51,6 +51,9 @@ pub async fn ota_begin<S: Storage, R: Read>(
         storage,
         PartitionType::App(AppPartitionType::Ota(new_part)),
     )?;
+    
+    // Erase partition
+    storage.erase(ota_app.offset, ota_app.offset + ota_app.size as u32).map_err(|e| OtaInternalError::NorFlashOpError(NorFlashOpError::StorageError(e)))?;
 
     // Write ota data to flash
     let mut data_written = 0;
@@ -80,7 +83,7 @@ pub async fn ota_begin<S: Storage, R: Read>(
         storage.write(
             ota_app.offset + data_written as u32,
             &data_buffer[0..read_len],
-        ).map_err(|e| OtaInternalError::StorageOpError(StorageOpError::StorageError(e)))?;
+        ).map_err(|e| OtaInternalError::NorFlashOpError(NorFlashOpError::StorageError(e)))?;
 
         data_written += read_len;
         progress_fn(data_written);

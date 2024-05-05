@@ -1,8 +1,8 @@
-use embedded_storage::ReadStorage;
-use esp_partition_table::StorageOpError;
+use embedded_storage::nor_flash::NorFlash;
+use esp_partition_table::{NorFlashOpError};
 
 /// Errors that may occur during an OTA update
-pub enum OtaUpdateError<S: ReadStorage, R> {
+pub enum OtaUpdateError<S: NorFlash, R> {
     /// The image that was booted hasn't been verified as working yet,
     /// so it may not start an update before being verified.
     /// See `ota_accept`
@@ -17,21 +17,21 @@ pub enum OtaUpdateError<S: ReadStorage, R> {
     InternalError(OtaInternalError<S>),
 }
 
-impl<S: ReadStorage, R> From<OtaInternalError<S>> for OtaUpdateError<S, R> {
+impl<S: NorFlash, R> From<OtaInternalError<S>> for OtaUpdateError<S, R> {
     fn from(value: OtaInternalError<S>) -> Self {
         OtaUpdateError::InternalError(value)
     }
 }
 
-pub enum OtaInternalError<S: ReadStorage> {
+pub enum OtaInternalError<S: NorFlash> {
     OtaDataCorrupt,
-    StorageOpError(StorageOpError<S>),
+    NorFlashOpError(NorFlashOpError<S>),
     PartitionNotFound,
     PartitionFoundTwice,
 }
 
-impl<S: ReadStorage> From<StorageOpError<S>> for OtaInternalError<S> {
-    fn from(value: StorageOpError<S>) -> Self {
-        OtaInternalError::StorageOpError(value)
+impl<S: NorFlash> From<NorFlashOpError<S>> for OtaInternalError<S> {
+    fn from(value: NorFlashOpError<S>) -> Self {
+        OtaInternalError::NorFlashOpError(value)
     }
 }
