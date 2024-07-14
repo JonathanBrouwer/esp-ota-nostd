@@ -24,3 +24,25 @@ pub fn find_partition_by_type<S: NorFlash>(
 
     found_partition.ok_or(PartitionNotFound)
 }
+
+/// Find partition entry by name
+pub fn find_partition_by_name<S: NorFlash>(
+    storage: &mut S,
+    name: &str
+) -> Result<PartitionEntry, OtaInternalError<S>> {
+    let table = PartitionTable::default();
+    let mut found_partition = None;
+
+    for entry in table.iter_nor_flash(storage, false) {
+        let ok_entry = entry.map_err(NorFlashOpError)?;
+        if ok_entry.name() == name {
+            if found_partition.is_none() {
+                found_partition = Some(ok_entry);
+            } else {
+                return Err(PartitionFoundTwice);
+            }
+        }
+    }
+
+    found_partition.ok_or(PartitionNotFound)
+}

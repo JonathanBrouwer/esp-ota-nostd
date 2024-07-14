@@ -35,7 +35,7 @@ pub fn write_ota_data<S: NorFlash>(
 
     // Write sector A
     storage
-        .erase(ota_data_part.offset, SECTOR_SIZE as u32)
+        .erase(ota_data_part.offset, ota_data_part.offset + SECTOR_SIZE as u32)
         .map_err(|e| NorFlashOpError::StorageError(e))?;
     storage
         .write(ota_data_part.offset, &buffer)
@@ -45,7 +45,7 @@ pub fn write_ota_data<S: NorFlash>(
     storage
         .erase(
             ota_data_part.offset + SECTOR_SIZE as u32,
-            SECTOR_SIZE as u32,
+            ota_data_part.offset + 2 * SECTOR_SIZE as u32,
         )
         .map_err(|e| NorFlashOpError::StorageError(e))?;
     storage
