@@ -6,9 +6,9 @@ authors = ["Jonathan Brouwer <jonathantbrouwer@gmail.com>", "Anne Stijns <anstij
 license = "MIT"
 
 [dependencies]
-portable-atomic = { version = "1.6", default-features = false, features = ["require-cas"] }
+portable-atomic = { version = "1.9", default-features = false, features = ["require-cas"] }
 esp-partition-table = "0.1"
 crc = "3.2"
 embedded-io-async = "0.6"
 embedded-storage = "0.3"
-log = { version = "0.4.21", default-features = false }
+log = { version = "0.4", default-features = false }
