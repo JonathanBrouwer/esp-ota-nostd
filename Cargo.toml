@@ -1,5 +1,6 @@
 [package]
 name = "esp-ota-nostd"
+description = "A from scratch implementation of OTA compatible with the default ESP32 bootloader"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jonathan Brouwer <jonathantbrouwer@gmail.com>", "Anne Stijns <anstijns@gmail.com>"]
